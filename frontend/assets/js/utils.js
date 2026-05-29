@@ -1,139 +1,77 @@
-/**
- * Utilities - Funciones auxiliares
- * Formateo de fechas, validaciones, etc.
- */
-
-class Utils {
-  /**
-   * Formatea una fecha ISO a formato legible
-   */
-  static formatDate(isoString) {
-    const date = new Date(isoString);
-    const options = {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit'
-    };
-    return date.toLocaleDateString('es-SV', options);
-  }
-
-  /**
-   * Formatea un número como moneda
-   */
-  static formatCurrency(amount) {
-    return new Intl.NumberFormat('es-SV', {
-      style: 'currency',
-      currency: 'USD'
-    }).format(amount);
-  }
-
-  /**
-   * Valida un email
-   */
-  static isValidEmail(email) {
+// Utility Functions
+const Utils = {
+  // Validate email format
+  isValidEmail(email) {
     const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return regex.test(email);
-  }
-
-  /**
-   * Valida un username
-   */
-  static isValidUsername(username) {
-    return username.length >= 3 && username.length <= 50;
-  }
-
-  /**
-   * Valida una contraseña
-   */
-  static isValidPassword(password) {
-    return password.length >= 6;
-  }
-
-  /**
-   * Valida una edad
-   */
-  static isValidAge(age) {
+  },
+  
+  // Validate username (3-50 chars)
+  isValidUsername(username) {
+    return username && username.length >= 3 && username.length <= 50;
+  },
+  
+  // Validate password (minimum 6 chars)
+  isValidPassword(password) {
+    return password && password.length >= 6;
+  },
+  
+  // Validate age (1-150)
+  isValidAge(age) {
     const ageNum = parseInt(age);
-    return ageNum >= 1 && ageNum <= 150;
-  }
-
-  /**
-   * Valida un número entero
-   */
-  static isValidInteger(value) {
+    return !isNaN(ageNum) && ageNum >= 1 && ageNum <= 150;
+  },
+  
+  // Validate positive integer
+  isValidInteger(value) {
     const num = parseInt(value);
     return !isNaN(num) && num > 0;
-  }
-
-  /**
-   * Elimina espacios en blanco de inicio y fin
-   */
-  static trim(text) {
+  },
+  
+  // Trim whitespace
+  trim(text) {
     return text ? text.trim() : '';
-  }
-
-  /**
-   * Calcula días restantes hasta un evento
-   */
-  static daysUntilEvent(eventDate) {
+  },
+  
+  // Calculate days until event
+  daysUntilEvent(eventDate) {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-
+    
     const event = new Date(eventDate);
     event.setHours(0, 0, 0, 0);
-
+    
     const diffTime = event - today;
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
+    
     return diffDays;
-  }
-
-  /**
-   * Formatea estado de reserva
-   */
-  static formatBookingStatus(status) {
+  },
+  
+  // Format booking status
+  formatBookingStatus(status) {
     const statusMap = {
       'CONFIRMED': 'Confirmada',
       'CANCELLED': 'Cancelada'
     };
     return statusMap[status] || status;
-  }
-
-  /**
-   * Formatea rol de usuario
-   */
-  static formatRole(role) {
+  },
+  
+  // Format role
+  formatRole(role) {
     const roleMap = {
       'ROLE_ADMIN': 'Administrador',
       'ROLE_USER': 'Usuario'
     };
     return roleMap[role] || role;
-  }
-
-  /**
-   * Copia texto al portapapeles
-   */
-  static copyToClipboard(text) {
-    navigator.clipboard.writeText(text).then(() => {
-      UIService.showSuccess('Copiado al portapapeles');
-    }).catch(() => {
-      UIService.showError('No se pudo copiar al portapapeles');
-    });
-  }
-
-  /**
-   * Genera un ID único
-   */
-  static generateId() {
+  },
+  
+  // Generate unique ID
+  generateId() {
     return '_' + Math.random().toString(36).substr(2, 9);
-  }
-
-  /**
-   * Debounce para funciones
-   */
-  static debounce(func, wait) {
+  },
+  
+  // Debounce function
+  debounce(func, wait) {
     let timeout;
     return function executedFunction(...args) {
       const later = () => {
@@ -143,12 +81,10 @@ class Utils {
       clearTimeout(timeout);
       timeout = setTimeout(later, wait);
     };
-  }
-
-  /**
-   * Throttle para funciones
-   */
-  static throttle(func, limit) {
+  },
+  
+  // Throttle function
+  throttle(func, limit) {
     let inThrottle;
     return function(...args) {
       if (!inThrottle) {
@@ -158,4 +94,4 @@ class Utils {
       }
     };
   }
-}
+};

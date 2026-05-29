@@ -3,229 +3,274 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="Panel Administrativo - EventBooking">
-  <title>Administración - EventBooking</title>
-  
-  <link rel="stylesheet" href="assets/css/variables.css">
-  <link rel="stylesheet" href="assets/css/global.css">
-  <link rel="stylesheet" href="assets/css/navbar.css">
-  <link rel="stylesheet" href="assets/css/admin.css">
-  <link rel="stylesheet" href="assets/css/responsive.css">
-  
-  <script src="assets/js/config.js"></script>
-  <script src="assets/js/api.js"></script>
-  <script src="assets/js/storage.js"></script>
-  <script src="assets/js/auth.js"></script>
-  <script src="assets/js/utils.js"></script>
-  <script src="assets/js/ui.js"></script>
-  <script src="assets/js/guards.js"></script>
+  <title>Admin - EventBooking</title>
+  <link rel="stylesheet" href="assets/css/styles.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@600;700&display=swap" rel="stylesheet">
 </head>
 <body>
-  <header>
-    <nav class="navbar">
-      <div class="navbar-brand">🎫 EventBooking</div>
-      <ul class="navbar-nav">
-        <li><a href="/dashboard.html">Dashboard</a></li>
-        <li><a href="/events.html">Eventos</a></li>
-        <li><a href="/bookings.html">Mis Reservas</a></li>
-        <li><a href="/admin.html" class="active">Administración</a></li>
-      </ul>
-      <div class="user-menu">
-        <div class="user-info">
-          <span id="user-name">Administrador</span>
-          <div class="user-avatar"><span id="user-initial">A</span></div>
+  <div id="loader" class="loader" style="display: none;">
+    <div class="loader-content"><div class="spinner"></div><p class="loader-text">Procesando...</p></div>
+  </div>
+  <div id="toast-container" class="toast-container"></div>
+  <div id="confirm-modal" class="modal" style="display: none;">
+    <div class="modal-overlay">
+      <div class="modal-content">
+        <div class="modal-header"><h2 class="modal-title">Confirmar acción</h2></div>
+        <div class="modal-body"><p></p></div>
+        <div class="modal-footer">
+          <button class="modal-cancel btn btn-secondary">Cancelar</button>
+          <button class="modal-confirm btn btn-primary">Confirmar</button>
         </div>
-        <button class="logout-btn" onclick="AuthService.logout()">Salir</button>
       </div>
-    </nav>
-  </header>
-
-  <div class="admin-container">
-    <aside class="admin-sidebar">
-      <ul class="admin-sidebar-nav">
-        <li><a href="#" class="admin-link active" data-view="stats">📊 Estadísticas</a></li>
-        <li><a href="#" class="admin-link" data-view="events">📅 Gestionar Eventos</a></li>
-        <li><a href="#" class="admin-link" data-view="bookings">📋 Reservas del Sistema</a></li>
-      </ul>
-    </aside>
-
-    <main class="admin-main">
-      <!-- Stats View -->
-      <section id="statsView" class="admin-view">
-        <div class="page-header">
-          <h1 class="page-title">Estadísticas</h1>
-        </div>
-
-        <div class="admin-stats">
-          <div class="stat-card">
-            <div class="stat-value" id="totalEventsAdmin">-</div>
-            <div class="stat-label">Total de Eventos</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-value" id="totalBookings">-</div>
-            <div class="stat-label">Total de Reservas</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-value" id="totalCapacity">-</div>
-            <div class="stat-label">Capacidad Total</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-value" id="totalRevenue">-</div>
-            <div class="stat-label">Ingresos Totales</div>
-          </div>
-        </div>
-      </section>
-
-      <!-- Events Management View -->
-      <section id="eventsView" class="admin-view" style="display: none;">
-        <div class="page-header">
-          <h1 class="page-title">Gestionar Eventos</h1>
-          <button class="btn btn-success" onclick="showCreateEventModal()">+ Crear Evento</button>
-        </div>
-
-        <table class="admin-table">
-          <thead>
-            <tr>
-              <th>Título</th>
-              <th>Fecha</th>
-              <th>Capacidad</th>
-              <th>Disponibles</th>
-              <th>Precio</th>
-              <th>Acciones</th>
-            </tr>
-          </thead>
-          <tbody id="eventsTableBody">
-            <tr><td colspan="6" style="text-align: center; padding: var(--spacing-2xl);">Cargando...</td></tr>
-          </tbody>
-        </table>
-      </section>
-
-      <!-- Bookings View -->
-      <section id="bookingsView" class="admin-view" style="display: none;">
-        <div class="page-header">
-          <h1 class="page-title">Reservas del Sistema</h1>
-        </div>
-
-        <table class="admin-table">
-          <thead>
-            <tr>
-              <th>Usuario</th>
-              <th>Evento</th>
-              <th>Cantidad</th>
-              <th>Total</th>
-              <th>Estado</th>
-              <th>Fecha</th>
-            </tr>
-          </thead>
-          <tbody id="bookingsTableBody">
-            <tr><td colspan="6" style="text-align: center; padding: var(--spacing-2xl);">Cargando...</td></tr>
-          </tbody>
-        </table>
-      </section>
-    </main>
+    </div>
   </div>
 
+  <nav class="navbar">
+    <div class="navbar-container">
+      <a href="/" class="navbar-brand">EventBook</a>
+      <ul class="navbar-menu">
+        <li><a href="events.html">Eventos</a></li>
+        <li><a href="bookings.html">Mis Reservas</a></li>
+        <li><a href="admin.html" class="active">Admin</a></li>
+        <li><a href="#" id="logout-btn" onclick="handleLogout(event)">Cerrar Sesión</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <main>
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px;">
+      <div>
+        <h1>Panel Administrativo</h1>
+        <p class="text-muted">Crea y gestiona eventos</p>
+      </div>
+      <button id="newEventBtn" class="btn btn-primary btn-lg" onclick="showEventForm()">+ Nuevo Evento</button>
+    </div>
+
+    <div id="eventFormContainer" class="card" style="display: none; margin-bottom: 32px;">
+      <div class="card-header">
+        <h2>Formulario de Evento</h2>
+      </div>
+      <div class="card-body">
+        <form id="eventForm">
+          <div class="form-group">
+            <label for="eventName">Nombre del Evento</label>
+            <input type="text" id="eventName" name="name" required>
+            <div class="form-error" id="nameError"></div>
+          </div>
+
+          <div class="form-group">
+            <label for="eventDescription">Descripción</label>
+            <textarea id="eventDescription" name="description" required></textarea>
+            <div class="form-error" id="descriptionError"></div>
+          </div>
+
+          <div class="flex" style="gap: 16px;">
+            <div class="form-group" style="flex: 1;">
+              <label for="eventDate">Fecha y Hora</label>
+              <input type="datetime-local" id="eventDate" name="date" required>
+              <div class="form-error" id="dateError"></div>
+            </div>
+
+            <div class="form-group" style="flex: 1;">
+              <label for="eventCapacity">Capacidad</label>
+              <input type="number" id="eventCapacity" name="capacity" min="1" required>
+              <div class="form-error" id="capacityError"></div>
+            </div>
+          </div>
+
+          <div class="flex" style="gap: 16px;">
+            <div class="form-group" style="flex: 1;">
+              <label for="eventPrice">Precio</label>
+              <input type="number" id="eventPrice" name="price" min="0" step="0.01" required>
+              <div class="form-error" id="priceError"></div>
+            </div>
+          </div>
+
+          <div class="flex" style="gap: 12px;">
+            <button type="submit" class="btn btn-success">Guardar Evento</button>
+            <button type="button" class="btn btn-secondary" onclick="hideEventForm()">Cancelar</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div>
+      <h2>Eventos Creados</h2>
+      <div id="adminEventsContainer" class="events-grid"></div>
+    </div>
+  </main>
+
+  <script src="assets/js/config.js"></script>
+  <script src="assets/js/jwt-utils.js"></script>
+  <script src="assets/js/storage.js"></script>
+  <script src="assets/js/guards.js"></script>
+  <script src="assets/js/utils.js"></script>
+  <script src="assets/js/ui.js"></script>
+  <script src="assets/js/api.js"></script>
+
   <script>
-    // Navigation
-    document.querySelectorAll('.admin-link').forEach(link => {
-      link.addEventListener('click', (e) => {
-        e.preventDefault();
-        const view = e.target.dataset.view;
+    if (!RouteGuard.requireAdmin()) return;
 
-        document.querySelectorAll('.admin-link').forEach(l => l.classList.remove('active'));
-        e.target.classList.add('active');
+    let allEvents = [];
+    let editingId = null;
 
-        document.querySelectorAll('.admin-view').forEach(v => v.style.display = 'none');
-        document.getElementById(view + 'View').style.display = 'block';
+    async function loadEvents() {
+      UIManager.showLoader('Cargando eventos...');
+      try {
+        const events = await APIService.getEvents();
+        allEvents = Array.isArray(events) ? events : [];
+        renderAdminEvents(allEvents);
+      } catch (error) {
+        console.error('Error loading events:', error);
+      } finally {
+        UIManager.hideLoader();
+      }
+    }
 
-        if (view === 'events') loadEventsForAdmin();
-        if (view === 'bookings') loadAllBookings();
+    function renderAdminEvents(events) {
+      const container = document.getElementById('adminEventsContainer');
+      
+      if (events.length === 0) {
+        container.innerHTML = '<p style="grid-column: 1/-1; text-align: center; padding: 40px;">No hay eventos creados</p>';
+        return;
+      }
+
+      container.innerHTML = events.map(event => `
+        <div class="card event-card">
+          <div class="event-card-body">
+            <h3 class="event-title">${event.name || 'Sin nombre'}</h3>
+            <p>${(event.description || 'Sin descripción').substring(0, 100)}...</p>
+            <div class="event-meta">
+              <span>📅 ${UIManager.formatDate(event.date)}</span>
+              <span>${event.bookedCount || 0} / ${event.capacity || 0} reservas</span>
+            </div>
+            <p><strong>Precio:</strong> ${UIManager.formatCurrency(event.price || 0)}</p>
+            <div style="display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap;">
+              <button class="btn btn-secondary btn-sm" onclick="editEvent(${event.id})">Editar</button>
+              <button class="btn btn-danger btn-sm" onclick="deleteEvent(${event.id})">Eliminar</button>
+            </div>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function showEventForm(eventId = null) {
+      editingId = eventId;
+      const form = document.getElementById('eventFormContainer');
+      const eventForm = document.getElementById('eventForm');
+
+      if (eventId) {
+        const event = allEvents.find(e => e.id === eventId);
+        if (event) {
+          document.getElementById('eventName').value = event.name || '';
+          document.getElementById('eventDescription').value = event.description || '';
+          document.getElementById('eventDate').value = UIManager.formatDateForInput(event.date);
+          document.getElementById('eventCapacity').value = event.capacity || '';
+          document.getElementById('eventPrice').value = event.price || '';
+        }
+      } else {
+        eventForm.reset();
+      }
+
+      form.style.display = 'block';
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function hideEventForm() {
+      document.getElementById('eventFormContainer').style.display = 'none';
+      document.getElementById('eventForm').reset();
+      editingId = null;
+    }
+
+    function editEvent(id) {
+      showEventForm(id);
+    }
+
+    async function deleteEvent(id) {
+      const confirmed = await new Promise(resolve => {
+        UIManager.showConfirm(
+          'Eliminar Evento',
+          '¿Estás seguro de que deseas eliminar este evento?',
+          () => resolve(true),
+          () => resolve(false)
+        );
       });
+
+      if (!confirmed) return;
+
+      UIManager.showLoader('Eliminando evento...');
+      try {
+        await APIService.deleteEvent(id);
+        UIManager.showToast('Evento eliminado correctamente', 'success');
+        loadEvents();
+      } catch (error) {
+        UIManager.hideLoader();
+        console.error('Error deleting event:', error);
+      }
+    }
+
+    document.getElementById('eventForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const name = document.getElementById('eventName').value.trim();
+      const description = document.getElementById('eventDescription').value.trim();
+      const date = document.getElementById('eventDate').value;
+      const capacity = parseInt(document.getElementById('eventCapacity').value);
+      const price = parseFloat(document.getElementById('eventPrice').value);
+
+      // Clear errors
+      document.querySelectorAll('.form-error').forEach(el => el.textContent = '');
+
+      // Validate
+      let valid = true;
+      if (!name) {
+        document.getElementById('nameError').textContent = 'El nombre es obligatorio';
+        valid = false;
+      }
+      if (!description) {
+        document.getElementById('descriptionError').textContent = 'La descripción es obligatoria';
+        valid = false;
+      }
+      if (!date) {
+        document.getElementById('dateError').textContent = 'La fecha es obligatoria';
+        valid = false;
+      }
+      if (!capacity || capacity <= 0) {
+        document.getElementById('capacityError').textContent = 'La capacidad debe ser mayor a 0';
+        valid = false;
+      }
+      if (price === null || price === undefined) {
+        document.getElementById('priceError').textContent = 'El precio es obligatorio';
+        valid = false;
+      }
+
+      if (!valid) return;
+
+      UIManager.showLoader(editingId ? 'Actualizando evento...' : 'Creando evento...');
+
+      try {
+        if (editingId) {
+          await APIService.updateEvent(editingId, { name, description, date, capacity, price });
+          UIManager.showToast('Evento actualizado correctamente', 'success');
+        } else {
+          await APIService.createEvent({ name, description, date, capacity, price });
+          UIManager.showToast('Evento creado correctamente', 'success');
+        }
+        hideEventForm();
+        loadEvents();
+      } catch (error) {
+        UIManager.hideLoader();
+        console.error('Error saving event:', error);
+      }
     });
 
-    async function loadAdminStats() {
-      try {
-        UIService.updateNavigation();
-        const eventsRes = await api.get(CONFIG.EVENTS.LIST + '?page=0&size=1000');
-        
-        document.getElementById('totalEventsAdmin').textContent = eventsRes.totalElements || 0;
-        document.getElementById('totalCapacity').textContent = eventsRes.content?.reduce((sum, e) => sum + (e.capacity || 0), 0) || 0;
-      } catch (error) {
-        console.error('[AdminStats] Error:', error);
-      }
+    function handleLogout(e) {
+      e.preventDefault();
+      StorageManager.clearAuth();
+      window.location.href = '/login.html';
     }
 
-    async function loadEventsForAdmin() {
-      try {
-        const response = await api.get(CONFIG.EVENTS.LIST + '?page=0&size=100');
-        
-        const html = response.content.map(event => `
-          <tr>
-            <td>${event.title}</td>
-            <td>${Utils.formatDate(event.eventDate)}</td>
-            <td>${event.capacity}</td>
-            <td>${event.availableSpots}</td>
-            <td>${Utils.formatCurrency(event.pricePerTicket)}</td>
-            <td class="table-actions">
-              <button class="btn btn-primary" onclick="editEvent(${event.idEvent})">Editar</button>
-              <button class="btn btn-danger" onclick="deleteEvent(${event.idEvent})">Eliminar</button>
-            </td>
-          </tr>
-        `).join('');
-
-        document.getElementById('eventsTableBody').innerHTML = html || '<tr><td colspan="6" style="text-align: center;">No hay eventos</td></tr>';
-      } catch (error) {
-        console.error('[EventsAdmin] Error:', error);
-        UIService.showError('Error al cargar eventos');
-      }
-    }
-
-    async function loadAllBookings() {
-      try {
-        const response = await api.get(CONFIG.BOOKINGS.MY_BOOKINGS);
-        
-        const html = response.map(booking => `
-          <tr>
-            <td>${booking.username}</td>
-            <td>${booking.eventTitle}</td>
-            <td>${booking.quantity}</td>
-            <td>${Utils.formatCurrency(booking.totalAmount)}</td>
-            <td><span class="availability-badge ${booking.status === 'CONFIRMED' ? 'availability-available' : 'availability-full'}">${booking.status}</span></td>
-            <td>${Utils.formatDate(booking.bookingDate)}</td>
-          </tr>
-        `).join('');
-
-        document.getElementById('bookingsTableBody').innerHTML = html || '<tr><td colspan="6" style="text-align: center;">No hay reservas</td></tr>';
-      } catch (error) {
-        console.error('[BookingsAdmin] Error:', error);
-      }
-    }
-
-    function showCreateEventModal() {
-      UIService.showInfo('Funcionalidad de crear evento disponible próximamente');
-    }
-
-    function editEvent(eventId) {
-      UIService.showInfo('Funcionalidad de editar evento disponible próximamente');
-    }
-
-    async function deleteEvent(eventId) {
-      UIService.showConfirm(
-        'Eliminar Evento',
-        '¿Estás seguro de que deseas eliminar este evento?',
-        async () => {
-          try {
-            await api.delete(CONFIG.EVENTS.GET_BY_ID(eventId));
-            UIService.showSuccess('Evento eliminado');
-            loadEventsForAdmin();
-          } catch (error) {
-            UIService.showErrorResponse(error);
-          }
-        }
-      );
-    }
-
-    document.addEventListener('DOMContentLoaded', loadAdminStats);
+    document.addEventListener('DOMContentLoaded', loadEvents);
   </script>
 </body>
 </html>

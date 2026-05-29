@@ -3,118 +3,183 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="Eventos - EventBooking">
   <title>Eventos - EventBooking</title>
-  
-  <link rel="stylesheet" href="assets/css/variables.css">
-  <link rel="stylesheet" href="assets/css/global.css">
-  <link rel="stylesheet" href="assets/css/navbar.css">
-  <link rel="stylesheet" href="assets/css/dashboard.css">
-  <link rel="stylesheet" href="assets/css/events.css">
-  <link rel="stylesheet" href="assets/css/responsive.css">
-  
-  <script src="assets/js/config.js"></script>
-  <script src="assets/js/api.js"></script>
-  <script src="assets/js/storage.js"></script>
-  <script src="assets/js/auth.js"></script>
-  <script src="assets/js/utils.js"></script>
-  <script src="assets/js/ui.js"></script>
-  <script src="assets/js/guards.js"></script>
+  <link rel="stylesheet" href="assets/css/styles.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@600;700&display=swap" rel="stylesheet">
 </head>
 <body>
-  <header>
-    <nav class="navbar">
-      <div class="navbar-brand">🎫 EventBooking</div>
-      <ul class="navbar-nav">
-        <li><a href="/dashboard.html">Dashboard</a></li>
-        <li><a href="/events.html" class="active">Eventos</a></li>
-        <li><a href="/bookings.html">Mis Reservas</a></li>
-        <li data-role="admin" style="display: none;"><a href="/admin.html">Administración</a></li>
-      </ul>
-      <div class="user-menu">
-        <div class="user-info">
-          <span id="user-name">Usuario</span>
-          <div class="user-avatar"><span id="user-initial">U</span></div>
+  <div id="loader" class="loader" style="display: none;">
+    <div class="loader-content"><div class="spinner"></div><p class="loader-text">Cargando eventos...</p></div>
+  </div>
+  <div id="toast-container" class="toast-container"></div>
+  <div id="confirm-modal" class="modal" style="display: none;">
+    <div class="modal-overlay">
+      <div class="modal-content">
+        <div class="modal-header"><h2 class="modal-title">Confirmar acción</h2></div>
+        <div class="modal-body"><p></p></div>
+        <div class="modal-footer">
+          <button class="modal-cancel btn btn-secondary">Cancelar</button>
+          <button class="modal-confirm btn btn-primary">Confirmar</button>
         </div>
-        <button class="logout-btn" onclick="AuthService.logout()">Salir</button>
-      </div>
-    </nav>
-  </header>
-
-  <div class="dashboard-container">
-    <div class="main-content">
-      <div class="page-header">
-        <h1 class="page-title">Eventos Disponibles</h1>
-      </div>
-
-      <div id="eventsGrid" class="events-grid"></div>
-      <div id="eventsLoader"></div>
-
-      <div id="emptyState" class="empty-state" style="display: none;">
-        <div class="empty-state-icon">📭</div>
-        <h3>No hay eventos disponibles</h3>
-        <p>Intenta más tarde</p>
       </div>
     </div>
   </div>
 
+  <nav class="navbar">
+    <div class="navbar-container">
+      <a href="/" class="navbar-brand">EventBook</a>
+      <ul class="navbar-menu">
+        <li><a href="events.html" class="active">Eventos</a></li>
+        <li><a href="bookings.html">Mis Reservas</a></li>
+        <li data-admin-only style="display: none;"><a href="admin.html">Admin</a></li>
+        <li><a href="#" id="logout-btn" onclick="handleLogout(event)">Cerrar Sesión</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <main>
+    <section class="events-header">
+      <div class="flex-between">
+        <div>
+          <h1>Eventos Disponibles</h1>
+          <p class="text-muted">Descubre y reserva los mejores eventos</p>
+        </div>
+        <button id="createEventBtn" class="btn btn-primary btn-lg" data-admin-only style="display: none;" onclick="createEvent()">
+          + Crear Evento
+        </button>
+      </div>
+    </section>
+
+    <section class="events-filters mb-3">
+      <input type="text" id="searchInput" placeholder="Buscar eventos..." style="width: 100%; padding: 12px 16px; border: 1px solid #dee2e6; border-radius: 12px; font-size: 16px;">
+    </section>
+
+    <section id="eventsContainer" class="events-grid"></section>
+  </main>
+
+  <script src="assets/js/config.js"></script>
+  <script src="assets/js/jwt-utils.js"></script>
+  <script src="assets/js/storage.js"></script>
+  <script src="assets/js/guards.js"></script>
+  <script src="assets/js/utils.js"></script>
+  <script src="assets/js/ui.js"></script>
+  <script src="assets/js/api.js"></script>
+
   <script>
-    let currentPage = 0;
-    const pageSize = 9;
+    if (!RouteGuard.requireAuth()) return;
 
-    async function loadEvents(page = 0) {
+    let allEvents = [];
+
+    async function loadEvents() {
+      UIManager.showLoader('Cargando eventos...');
       try {
-        UIService.updateNavigation();
-        UIService.showSkeletonLoader('eventsGrid', pageSize);
-        
-        const response = await api.get(CONFIG.EVENTS.LIST + `?page=${page}&size=${pageSize}`);
-        
-        if (!response.content || response.content.length === 0) {
-          document.getElementById('emptyState').style.display = 'block';
-          document.getElementById('eventsGrid').innerHTML = '';
-          return;
-        }
-
-        const html = response.content.map(event => {
-          const availableSpots = event.availableSpots || 0;
-          let badge = '<span class="availability-badge availability-full">AGOTADO</span>';
-          
-          if (availableSpots > 10) {
-            badge = '<span class="availability-badge availability-available">DISPONIBLE</span>';
-          } else if (availableSpots > 0) {
-            badge = '<span class="availability-badge availability-limited">LIMITADO</span>';
-          }
-
-          return `
-            <div class="event-card">
-              <div class="event-card-image">🎫</div>
-              <div class="event-card-content">
-                <h3 class="event-card-title">${event.title}</h3>
-                <div class="event-card-date">📅 ${Utils.formatDate(event.eventDate)}</div>
-                <div class="event-card-venue">📍 ${event.venue}</div>
-                <div class="event-card-price">${Utils.formatCurrency(event.pricePerTicket)}</div>
-                <div class="event-card-availability">
-                  ${badge}
-                  <span style="font-size: var(--font-size-sm);">${availableSpots} cupos</span>
-                </div>
-                <div class="event-card-actions">
-                  <a href="/event-detail.html?id=${event.idEvent}" class="btn btn-primary" style="flex: 1; text-align: center;">Ver Detalles</a>
-                  ${availableSpots > 0 ? `<a href="/event-detail.html?id=${event.idEvent}#booking" class="btn btn-success" style="flex: 1; text-align: center;">Reservar</a>` : `<button class="btn btn-secondary" disabled style="flex: 1;">Agotado</button>`}
-                </div>
-              </div>
-            </div>
-          `;
-        }).join('');
-
-        document.getElementById('eventsGrid').innerHTML = html;
-        document.getElementById('emptyState').style.display = 'none';
+        const events = await APIService.getEvents();
+        allEvents = Array.isArray(events) ? events : [];
+        renderEvents(allEvents);
       } catch (error) {
-        console.error('[Events] Error:', error);
-        UIService.showError('Error al cargar eventos');
+        console.error('Error loading events:', error);
+        document.getElementById('eventsContainer').innerHTML = '<p style="grid-column: 1/-1; text-align: center; padding: 40px;">Error cargando eventos</p>';
+      } finally {
+        UIManager.hideLoader();
       }
     }
 
-    document.addEventListener('DOMContentLoaded', () => loadEvents());
+    function renderEvents(events) {
+      const container = document.getElementById('eventsContainer');
+      
+      if (events.length === 0) {
+        container.innerHTML = '<p style="grid-column: 1/-1; text-align: center; padding: 40px;">No hay eventos disponibles</p>';
+        return;
+      }
+
+      container.innerHTML = events.map(event => {
+        const remaining = UIManager.getRemainingCapacity(event.capacity || 0, event.bookedCount || 0);
+        const isFull = remaining <= 0;
+        const capacityClass = isFull ? 'full' : (remaining < 10 ? 'low' : '');
+        
+        return `
+          <div class="card event-card">
+            <div class="event-card-body">
+              <h3 class="event-title">${event.name || 'Sin nombre'}</h3>
+              <p>${(event.description || 'Sin descripción').substring(0, 100)}...</p>
+              <div class="event-meta">
+                <span>📅 ${UIManager.formatDate(event.date)}</span>
+                <span class="event-capacity ${capacityClass}">
+                  ${remaining} / ${event.capacity || 0} cupos
+                </span>
+              </div>
+              <p><strong>Precio:</strong> ${UIManager.formatCurrency(event.price || 0)}</p>
+              <div style="display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap;">
+                <button class="btn btn-primary btn-sm" onclick="viewEvent(${event.id})">Ver Detalle</button>
+                ${StorageManager.isAdmin() ? `
+                  <button class="btn btn-secondary btn-sm" onclick="editEvent(${event.id})">Editar</button>
+                  <button class="btn btn-danger btn-sm" onclick="deleteEvent(${event.id})">Eliminar</button>
+                ` : ''}
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    document.getElementById('searchInput').addEventListener('input', (e) => {
+      const search = e.target.value.toLowerCase();
+      const filtered = allEvents.filter(evt => 
+        (evt.name || '').toLowerCase().includes(search) || 
+        (evt.description || '').toLowerCase().includes(search)
+      );
+      renderEvents(filtered);
+    });
+
+    function handleLogout(e) {
+      e.preventDefault();
+      StorageManager.clearAuth();
+      window.location.href = '/login.html';
+    }
+
+    function viewEvent(id) {
+      window.location.href = `/event-detail.html?id=${id}`;
+    }
+
+    function editEvent(id) {
+      window.location.href = `/admin.html?edit=${id}`;
+    }
+
+    async function deleteEvent(id) {
+      const confirmed = await new Promise(resolve => {
+        UIManager.showConfirm(
+          'Eliminar Evento',
+          '¿Estás seguro de que deseas eliminar este evento?',
+          () => resolve(true),
+          () => resolve(false)
+        );
+      });
+
+      if (!confirmed) return;
+
+      UIManager.showLoader('Eliminando evento...');
+      try {
+        await APIService.deleteEvent(id);
+        UIManager.showToast('Evento eliminado correctamente', 'success');
+        loadEvents();
+      } catch (error) {
+        console.error('Error deleting event:', error);
+      } finally {
+        UIManager.hideLoader();
+      }
+    }
+
+    function createEvent() {
+      window.location.href = '/admin.html';
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      if (StorageManager.isAdmin()) {
+        document.querySelector('[data-admin-only]').style.display = 'block';
+        document.getElementById('createEventBtn').style.display = 'inline-block';
+      }
+      loadEvents();
+    });
   </script>
 </body>
 </html>

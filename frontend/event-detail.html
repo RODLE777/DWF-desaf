@@ -3,231 +3,226 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="Detalles del Evento - EventBooking">
-  <title>Detalles del Evento - EventBooking</title>
-  
-  <link rel="stylesheet" href="assets/css/variables.css">
-  <link rel="stylesheet" href="assets/css/global.css">
-  <link rel="stylesheet" href="assets/css/navbar.css">
-  <link rel="stylesheet" href="assets/css/dashboard.css">
-  <link rel="stylesheet" href="assets/css/events.css">
-  <link rel="stylesheet" href="assets/css/responsive.css">
-  
-  <script src="assets/js/config.js"></script>
-  <script src="assets/js/api.js"></script>
-  <script src="assets/js/storage.js"></script>
-  <script src="assets/js/auth.js"></script>
-  <script src="assets/js/utils.js"></script>
-  <script src="assets/js/ui.js"></script>
-  <script src="assets/js/guards.js"></script>
+  <title>Detalle Evento - EventBooking</title>
+  <link rel="stylesheet" href="assets/css/styles.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@600;700&display=swap" rel="stylesheet">
 </head>
 <body>
-  <header>
-    <nav class="navbar">
-      <div class="navbar-brand">🎫 EventBooking</div>
-      <ul class="navbar-nav">
-        <li><a href="/dashboard.html">Dashboard</a></li>
-        <li><a href="/events.html" class="active">Eventos</a></li>
-        <li><a href="/bookings.html">Mis Reservas</a></li>
-        <li data-role="admin" style="display: none;"><a href="/admin.html">Administración</a></li>
-      </ul>
-      <div class="user-menu">
-        <div class="user-info">
-          <span id="user-name">Usuario</span>
-          <div class="user-avatar"><span id="user-initial">U</span></div>
-        </div>
-        <button class="logout-btn" onclick="AuthService.logout()">Salir</button>
-      </div>
-    </nav>
-  </header>
-
-  <div class="dashboard-container">
-    <div class="main-content">
-      <a href="/events.html" style="margin-bottom: var(--spacing-lg); display: inline-block;">← Volver a eventos</a>
-      
-      <div id="eventLoader"></div>
-
-      <div id="eventDetail" class="event-detail" style="display: none;">
-        <div class="event-detail-header">
-          <div class="event-detail-image">🎫</div>
-          <div class="event-detail-info">
-            <h1 id="eventTitle" style="margin-top: 0;"></h1>
-            <div class="event-info-item">
-              <span class="event-info-label">Fecha</span>
-              <span class="event-info-value" id="eventDate"></span>
-            </div>
-            <div class="event-info-item">
-              <span class="event-info-label">Lugar</span>
-              <span class="event-info-value" id="eventVenue"></span>
-            </div>
-            <div class="event-info-item">
-              <span class="event-info-label">Precio por Entrada</span>
-              <span class="event-info-value" id="eventPrice"></span>
-            </div>
-            <div class="event-info-item">
-              <span class="event-info-label">Capacidad</span>
-              <span class="event-info-value" id="eventCapacity"></span>
-            </div>
-            <div class="event-info-item">
-              <span class="event-info-label">Cupos Disponibles</span>
-              <span class="event-info-value" id="eventAvailable"></span>
-            </div>
-          </div>
-        </div>
-
-        <div class="event-description" id="eventDescription"></div>
-      </div>
-
-      <!-- Booking Form -->
-      <div id="bookingSection" style="display: none;">
-        <div class="booking-form">
-          <h3>Realizar Reserva</h3>
-          
-          <div class="form-group">
-            <label for="quantity" class="required">Cantidad de Entradas</label>
-            <div class="quantity-selector">
-              <button type="button" class="quantity-btn" id="decreaseBtn">−</button>
-              <input type="number" id="quantity" class="quantity-input" value="1" min="1" max="100">
-              <button type="button" class="quantity-btn" id="increaseBtn">+</button>
-            </div>
-            <div class="form-error" id="quantityError"></div>
-          </div>
-
-          <div class="booking-summary">
-            <div class="summary-row">
-              <span>Precio Unitario:</span>
-              <span id="summaryPrice">$0.00</span>
-            </div>
-            <div class="summary-row">
-              <span>Cantidad:</span>
-              <span id="summaryQuantity">1</span>
-            </div>
-            <div class="summary-row total">
-              <span>Total:</span>
-              <span id="summaryTotal">$0.00</span>
-            </div>
-          </div>
-
-          <button type="button" id="bookingBtn" class="btn btn-success btn-large btn-block">
-            Confirmar Reserva
-          </button>
+  <div id="loader" class="loader" style="display: none;">
+    <div class="loader-content"><div class="spinner"></div><p class="loader-text">Cargando...</p></div>
+  </div>
+  <div id="toast-container" class="toast-container"></div>
+  <div id="confirm-modal" class="modal" style="display: none;">
+    <div class="modal-overlay">
+      <div class="modal-content">
+        <div class="modal-header"><h2 class="modal-title">Confirmar acción</h2></div>
+        <div class="modal-body"><p></p></div>
+        <div class="modal-footer">
+          <button class="modal-cancel btn btn-secondary">Cancelar</button>
+          <button class="modal-confirm btn btn-primary">Confirmar</button>
         </div>
       </div>
     </div>
   </div>
 
+  <nav class="navbar">
+    <div class="navbar-container">
+      <a href="/" class="navbar-brand">EventBook</a>
+      <ul class="navbar-menu">
+        <li><a href="events.html">Eventos</a></li>
+        <li><a href="bookings.html">Mis Reservas</a></li>
+        <li data-admin-only style="display: none;"><a href="admin.html">Admin</a></li>
+        <li><a href="#" id="logout-btn" onclick="handleLogout(event)">Cerrar Sesión</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <main>
+    <div style="margin-bottom: 24px;">
+      <a href="events.html" style="color: #4361ee; font-weight: 600;">← Volver a Eventos</a>
+    </div>
+
+    <div class="flex" style="gap: 32px; flex-wrap: wrap;">
+      <div style="flex: 1; min-width: 300px;">
+        <div class="card" id="eventDetail">
+          <div style="text-align: center; padding: 40px; font-size: 60px;">🎫</div>
+        </div>
+      </div>
+
+      <div style="flex: 1; min-width: 300px;">
+        <div class="card">
+          <div class="card-header">
+            <h3>Hacer Reserva</h3>
+          </div>
+          <div class="card-body">
+            <form id="bookingForm">
+              <div class="form-group">
+                <label for="quantity">Cantidad de Entradas</label>
+                <input type="number" id="quantity" name="quantity" min="1" value="1" required>
+                <div class="form-error" id="quantityError"></div>
+              </div>
+
+              <div id="capacityWarning" style="background: #fff3cd; border-left: 4px solid #ffc107; padding: 12px; margin-bottom: 16px; display: none; border-radius: 8px;">
+                <p style="margin: 0; color: #856404; font-size: 14px;" id="capacityMessage"></p>
+              </div>
+
+              <div style="background: #f8f9fa; padding: 16px; border-radius: 12px; margin-bottom: 16px;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                  <span>Precio Unitario:</span>
+                  <span id="unitPrice">$0</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; font-weight: 700; border-top: 1px solid #dee2e6; padding-top: 8px;">
+                  <span>Total:</span>
+                  <span id="totalPrice">$0</span>
+                </div>
+              </div>
+
+              <button type="submit" class="btn btn-success btn-lg btn-block">Reservar</button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script src="assets/js/config.js"></script>
+  <script src="assets/js/jwt-utils.js"></script>
+  <script src="assets/js/storage.js"></script>
+  <script src="assets/js/guards.js"></script>
+  <script src="assets/js/utils.js"></script>
+  <script src="assets/js/ui.js"></script>
+  <script src="assets/js/api.js"></script>
+
   <script>
-    let eventData = null;
-    let eventId = null;
+    if (!RouteGuard.requireAuth()) return;
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const eventId = parseInt(urlParams.get('id'));
+    let event = null;
 
     async function loadEvent() {
+      UIManager.showLoader('Cargando evento...');
       try {
-        UIService.updateNavigation();
-        const params = new URLSearchParams(window.location.search);
-        eventId = params.get('id');
-
-        if (!eventId) {
-          window.location.href = CONFIG.ROUTES.EVENTS;
-          return;
-        }
-
-        UIService.showSkeletonLoader('eventLoader', 1);
-        eventData = await api.get(CONFIG.EVENTS.GET_BY_ID(eventId));
-
-        document.getElementById('eventTitle').textContent = eventData.title;
-        document.getElementById('eventDate').textContent = Utils.formatDate(eventData.eventDate);
-        document.getElementById('eventVenue').textContent = eventData.venue;
-        document.getElementById('eventPrice').textContent = Utils.formatCurrency(eventData.pricePerTicket);
-        document.getElementById('eventCapacity').textContent = eventData.capacity;
-        document.getElementById('eventAvailable').textContent = eventData.availableSpots;
-        document.getElementById('eventDescription').innerHTML = `<strong>Descripción:</strong><br>${eventData.description}`;
-
-        document.getElementById('eventLoader').innerHTML = '';
-        document.getElementById('eventDetail').style.display = 'block';
-
-        if (eventData.availableSpots > 0) {
-          document.getElementById('bookingSection').style.display = 'block';
-          updateBookingSummary();
-        }
+        event = await APIService.getEventDetail(eventId);
+        renderEvent();
       } catch (error) {
-        console.error('[EventDetail] Error:', error);
-        UIService.showError('Error al cargar evento');
+        console.error('Error loading event:', error);
+        document.getElementById('eventDetail').innerHTML = '<p style="text-align: center; padding: 40px;">Error cargando evento</p>';
+      } finally {
+        UIManager.hideLoader();
       }
     }
 
-    function updateBookingSummary() {
-      const quantity = parseInt(document.getElementById('quantity').value) || 1;
-      const price = eventData.pricePerTicket;
-      const total = price * quantity;
+    function renderEvent() {
+      const remaining = UIManager.getRemainingCapacity(event.capacity || 0, event.bookedCount || 0);
+      const isFull = remaining <= 0;
 
-      document.getElementById('summaryPrice').textContent = Utils.formatCurrency(price);
-      document.getElementById('summaryQuantity').textContent = quantity;
-      document.getElementById('summaryTotal').textContent = Utils.formatCurrency(total);
+      document.getElementById('eventDetail').innerHTML = `
+        <div class="card-header">
+          <h2 style="margin: 0;">${event.name || 'Sin nombre'}</h2>
+        </div>
+        <div class="card-body">
+          <p>${event.description || 'Sin descripción'}</p>
+          
+          <div style="background: #f8f9fa; padding: 16px; border-radius: 12px; margin-bottom: 16px;">
+            <div style="margin-bottom: 12px;">
+              <strong>📅 Fecha:</strong> ${UIManager.formatDate(event.date)}
+            </div>
+            <div style="margin-bottom: 12px;">
+              <strong>🕐 Hora:</strong> ${UIManager.formatTime(event.date)}
+            </div>
+            <div style="margin-bottom: 12px;">
+              <strong>💰 Precio:</strong> ${UIManager.formatCurrency(event.price || 0)}
+            </div>
+            <div>
+              <strong>🎫 Disponibles:</strong> 
+              <span style="color: ${isFull ? '#dc3545' : remaining < 10 ? '#ffc107' : '#198754'}; font-weight: 700;">
+                ${remaining} / ${event.capacity || 0}
+              </span>
+            </div>
+          </div>
+
+          ${isFull ? '<p style="color: #dc3545; font-weight: 600;">Este evento está agotado.</p>' : ''}
+        </div>
+      `;
+
+      document.getElementById('unitPrice').textContent = UIManager.formatCurrency(event.price || 0);
+      updateTotal();
+
+      if (isFull) {
+        document.getElementById('bookingForm').style.display = 'none';
+      }
+
+      if (remaining > 0 && remaining < 10) {
+        document.getElementById('capacityWarning').style.display = 'block';
+        document.getElementById('capacityMessage').textContent = `¡Quedan solo ${remaining} entradas disponibles!`;
+      }
     }
 
-    document.getElementById('quantity').addEventListener('input', () => {
+    function updateTotal() {
       const quantity = parseInt(document.getElementById('quantity').value) || 1;
-      const max = eventData.availableSpots;
-      
+      const total = (event.price || 0) * quantity;
+      document.getElementById('totalPrice').textContent = UIManager.formatCurrency(total);
+    }
+
+    document.getElementById('quantity').addEventListener('change', (e) => {
+      const remaining = UIManager.getRemainingCapacity(event.capacity || 0, event.bookedCount || 0);
+      const quantity = parseInt(e.target.value) || 1;
+
       document.getElementById('quantityError').textContent = '';
 
-      if (quantity < 1) {
-        document.getElementById('quantity').value = 1;
-      } else if (quantity > max) {
-        document.getElementById('quantity').value = max;
-        document.getElementById('quantityError').textContent = `Máximo ${max} entradas disponibles`;
-      }
-      
-      updateBookingSummary();
-    });
-
-    document.getElementById('decreaseBtn').addEventListener('click', () => {
-      const current = parseInt(document.getElementById('quantity').value) || 1;
-      if (current > 1) {
-        document.getElementById('quantity').value = current - 1;
-        document.getElementById('quantity').dispatchEvent(new Event('input'));
-      }
-    });
-
-    document.getElementById('increaseBtn').addEventListener('click', () => {
-      const current = parseInt(document.getElementById('quantity').value) || 1;
-      const max = eventData.availableSpots;
-      if (current < max) {
-        document.getElementById('quantity').value = current + 1;
-        document.getElementById('quantity').dispatchEvent(new Event('input'));
-      }
-    });
-
-    document.getElementById('bookingBtn').addEventListener('click', async () => {
-      const quantity = parseInt(document.getElementById('quantity').value) || 1;
-      const btn = document.getElementById('bookingBtn');
-
-      if (quantity < 1 || quantity > eventData.availableSpots) {
-        UIService.showError('Cantidad inválida');
+      if (quantity <= 0) {
+        document.getElementById('quantityError').textContent = 'La cantidad debe ser mayor a 0';
+        e.target.value = 1;
+        updateTotal();
         return;
       }
 
-      UIService.disableButton(btn);
+      if (quantity > remaining) {
+        document.getElementById('quantityError').textContent = `Solo hay ${remaining} entradas disponibles`;
+        e.target.value = remaining;
+      }
 
+      updateTotal();
+    });
+
+    document.getElementById('bookingForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const quantity = parseInt(document.getElementById('quantity').value);
+      const remaining = UIManager.getRemainingCapacity(event.capacity || 0, event.bookedCount || 0);
+
+      if (quantity <= 0 || quantity > remaining) {
+        UIManager.showToast('Cantidad de entradas inválida', 'error');
+        return;
+      }
+
+      UIManager.showLoader('Procesando reserva...');
       try {
-        const response = await api.post(CONFIG.BOOKINGS.CREATE, {
-          eventId: parseInt(eventId),
-          quantity: quantity
-        });
-
-        UIService.showSuccess('Reserva confirmada correctamente');
+        const booking = await APIService.createBooking(eventId, quantity);
+        UIManager.showToast('Reserva creada correctamente', 'success');
         setTimeout(() => {
-          window.location.href = CONFIG.ROUTES.BOOKINGS;
-        }, 1000);
+          window.location.href = '/bookings.html';
+        }, 500);
       } catch (error) {
-        console.error('[Booking] Error:', error);
-        UIService.showErrorResponse(error);
-      } finally {
-        UIService.enableButton(btn);
+        UIManager.hideLoader();
+        console.error('Booking error:', error);
       }
     });
 
-    document.addEventListener('DOMContentLoaded', loadEvent);
+    function handleLogout(e) {
+      e.preventDefault();
+      StorageManager.clearAuth();
+      window.location.href = '/login.html';
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      if (!eventId) {
+        document.getElementById('eventDetail').innerHTML = '<p>Evento no especificado</p>';
+        return;
+      }
+      loadEvent();
+    });
   </script>
 </body>
 </html>

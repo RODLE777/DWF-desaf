@@ -3,142 +3,151 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="Mis Reservas - EventBooking">
   <title>Mis Reservas - EventBooking</title>
-  
-  <link rel="stylesheet" href="assets/css/variables.css">
-  <link rel="stylesheet" href="assets/css/global.css">
-  <link rel="stylesheet" href="assets/css/navbar.css">
-  <link rel="stylesheet" href="assets/css/dashboard.css">
-  <link rel="stylesheet" href="assets/css/bookings.css">
-  <link rel="stylesheet" href="assets/css/responsive.css">
-  
-  <script src="assets/js/config.js"></script>
-  <script src="assets/js/api.js"></script>
-  <script src="assets/js/storage.js"></script>
-  <script src="assets/js/auth.js"></script>
-  <script src="assets/js/utils.js"></script>
-  <script src="assets/js/ui.js"></script>
-  <script src="assets/js/guards.js"></script>
+  <link rel="stylesheet" href="assets/css/styles.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@600;700&display=swap" rel="stylesheet">
 </head>
 <body>
-  <header>
-    <nav class="navbar">
-      <div class="navbar-brand">🎫 EventBooking</div>
-      <ul class="navbar-nav">
-        <li><a href="/dashboard.html">Dashboard</a></li>
-        <li><a href="/events.html">Eventos</a></li>
-        <li><a href="/bookings.html" class="active">Mis Reservas</a></li>
-        <li data-role="admin" style="display: none;"><a href="/admin.html">Administración</a></li>
-      </ul>
-      <div class="user-menu">
-        <div class="user-info">
-          <span id="user-name">Usuario</span>
-          <div class="user-avatar"><span id="user-initial">U</span></div>
+  <div id="loader" class="loader" style="display: none;">
+    <div class="loader-content"><div class="spinner"></div><p class="loader-text">Cargando reservas...</p></div>
+  </div>
+  <div id="toast-container" class="toast-container"></div>
+  <div id="confirm-modal" class="modal" style="display: none;">
+    <div class="modal-overlay">
+      <div class="modal-content">
+        <div class="modal-header"><h2 class="modal-title">Confirmar acción</h2></div>
+        <div class="modal-body"><p></p></div>
+        <div class="modal-footer">
+          <button class="modal-cancel btn btn-secondary">Cancelar</button>
+          <button class="modal-confirm btn btn-primary">Confirmar</button>
         </div>
-        <button class="logout-btn" onclick="AuthService.logout()">Salir</button>
-      </div>
-    </nav>
-  </header>
-
-  <div class="dashboard-container">
-    <div class="main-content">
-      <div class="page-header">
-        <h1 class="page-title">Mis Reservas</h1>
-      </div>
-
-      <div id="bookingsLoader"></div>
-      <div id="bookingsContainer" class="bookings-container"></div>
-
-      <div id="noBookings" class="no-bookings" style="display: none;">
-        <div class="no-bookings-icon">📭</div>
-        <h3>No tienes reservas</h3>
-        <p style="color: var(--color-text-secondary);">Aún no has realizado ninguna reserva</p>
-        <a href="/events.html" class="btn btn-primary" style="margin-top: var(--spacing-lg);">Explorar Eventos</a>
       </div>
     </div>
   </div>
 
+  <nav class="navbar">
+    <div class="navbar-container">
+      <a href="/" class="navbar-brand">EventBook</a>
+      <ul class="navbar-menu">
+        <li><a href="events.html">Eventos</a></li>
+        <li><a href="bookings.html" class="active">Mis Reservas</a></li>
+        <li data-admin-only style="display: none;"><a href="admin.html">Admin</a></li>
+        <li><a href="#" id="logout-btn" onclick="handleLogout(event)">Cerrar Sesión</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <main>
+    <div>
+      <h1>Mis Reservas</h1>
+      <p class="text-muted">Gestiona todas tus reservas de eventos</p>
+    </div>
+
+    <div style="margin-top: 24px; margin-bottom: 24px;">
+      <table style="width: 100%;">
+        <thead>
+          <tr>
+            <th>Evento</th>
+            <th>Fecha</th>
+            <th>Entradas</th>
+            <th>Precio Total</th>
+            <th>Estado</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody id="bookingsTable">
+          <tr><td colspan="6" style="text-align: center; padding: 40px;">Cargando...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </main>
+
+  <script src="assets/js/config.js"></script>
+  <script src="assets/js/jwt-utils.js"></script>
+  <script src="assets/js/storage.js"></script>
+  <script src="assets/js/guards.js"></script>
+  <script src="assets/js/utils.js"></script>
+  <script src="assets/js/ui.js"></script>
+  <script src="assets/js/api.js"></script>
+
   <script>
+    if (!RouteGuard.requireAuth()) return;
+
     async function loadBookings() {
+      UIManager.showLoader('Cargando reservas...');
       try {
-        UIService.updateNavigation();
-        UIService.showSkeletonLoader('bookingsLoader', 3);
-        
-        const response = await api.get(CONFIG.BOOKINGS.MY_BOOKINGS);
-        
-        if (!response || response.length === 0) {
-          document.getElementById('noBookings').style.display = 'block';
-          document.getElementById('bookingsContainer').innerHTML = '';
-          document.getElementById('bookingsLoader').innerHTML = '';
-          return;
-        }
-
-        const html = response.map(booking => {
-          const isConfirmed = booking.status === CONFIG.BOOKING_STATUS.CONFIRMED;
-          const statusClass = isConfirmed ? 'confirmed' : 'cancelled';
-          const statusText = Utils.formatBookingStatus(booking.status);
-
-          return `
-            <div class="booking-item">
-              <div class="booking-header">
-                <h3 class="booking-title">${booking.eventTitle}</h3>
-                <span class="booking-status ${statusClass}">${statusText}</span>
-              </div>
-              
-              <div class="booking-details">
-                <div class="booking-detail-item">
-                  <span class="booking-detail-label">Fecha del Evento</span>
-                  <span class="booking-detail-value">${Utils.formatDate(booking.eventDate)}</span>
-                </div>
-                <div class="booking-detail-item">
-                  <span class="booking-detail-label">Ubicación</span>
-                  <span class="booking-detail-value">${booking.eventVenue}</span>
-                </div>
-                <div class="booking-detail-item">
-                  <span class="booking-detail-label">Cantidad de Entradas</span>
-                  <span class="booking-detail-value">${booking.quantity}</span>
-                </div>
-                <div class="booking-detail-item">
-                  <span class="booking-detail-label">Total</span>
-                  <span class="booking-detail-value price">${Utils.formatCurrency(booking.totalAmount)}</span>
-                </div>
-                <div class="booking-detail-item">
-                  <span class="booking-detail-label">Fecha de Reserva</span>
-                  <span class="booking-detail-value">${Utils.formatDate(booking.bookingDate)}</span>
-                </div>
-              </div>
-
-              <div class="booking-actions">
-                ${isConfirmed ? `<button class="btn btn-danger" onclick="cancelBooking(${booking.idBooking})">Cancelar Reserva</button>` : '<button class="btn btn-secondary" disabled>Cancelada</button>'}
-              </div>
-            </div>
-          `;
-        }).join('');
-
-        document.getElementById('bookingsContainer').innerHTML = html;
-        document.getElementById('bookingsLoader').innerHTML = '';
+        const bookings = await APIService.getBookings();
+        renderBookings(Array.isArray(bookings) ? bookings : []);
       } catch (error) {
-        console.error('[Bookings] Error:', error);
-        UIService.showError('Error al cargar reservas');
+        console.error('Error loading bookings:', error);
+        document.getElementById('bookingsTable').innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 40px;">Error cargando reservas</td></tr>';
+      } finally {
+        UIManager.hideLoader();
       }
     }
 
-    async function cancelBooking(bookingId) {
-      UIService.showConfirm(
-        'Cancelar Reserva',
-        '¿Estás seguro de que deseas cancelar esta reserva?',
-        async () => {
-          try {
-            await api.delete(CONFIG.BOOKINGS.CANCEL(bookingId));
-            UIService.showSuccess('Reserva cancelada correctamente');
-            loadBookings();
-          } catch (error) {
-            console.error('[Cancel] Error:', error);
-            UIService.showErrorResponse(error);
-          }
-        }
-      );
+    function renderBookings(bookings) {
+      const tbody = document.getElementById('bookingsTable');
+      
+      if (bookings.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 40px;">No tienes reservas</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = bookings.map(booking => {
+        const statusColors = {
+          'active': 'badge-success',
+          'completed': 'badge-info',
+          'cancelled': 'badge-danger'
+        };
+        
+        return `
+          <tr>
+            <td>${booking.eventName || 'Sin nombre'}</td>
+            <td>${UIManager.formatDate(booking.eventDate)}</td>
+            <td>${booking.quantity || 0}</td>
+            <td>${UIManager.formatCurrency(booking.totalPrice || 0)}</td>
+            <td><span class="badge ${statusColors[booking.status] || 'badge-primary'}">${booking.status || 'activa'}</span></td>
+            <td>
+              <button class="btn btn-sm btn-secondary" onclick="viewBooking(${booking.id})">Ver</button>
+              ${booking.status !== 'cancelled' ? `<button class="btn btn-sm btn-danger" onclick="cancelBooking(${booking.id})">Cancelar</button>` : ''}
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function viewBooking(id) {
+      UIManager.showToast('Abriendo detalles de reserva...', 'info');
+    }
+
+    async function cancelBooking(id) {
+      const confirmed = await new Promise(resolve => {
+        UIManager.showConfirm(
+          'Cancelar Reserva',
+          '¿Estás seguro de que deseas cancelar esta reserva?',
+          () => resolve(true),
+          () => resolve(false)
+        );
+      });
+
+      if (!confirmed) return;
+
+      UIManager.showLoader('Cancelando reserva...');
+      try {
+        await APIService.cancelBooking(id);
+        UIManager.showToast('Reserva cancelada correctamente', 'success');
+        loadBookings();
+      } catch (error) {
+        UIManager.hideLoader();
+        console.error('Error cancelling booking:', error);
+      }
+    }
+
+    function handleLogout(e) {
+      e.preventDefault();
+      StorageManager.clearAuth();
+      window.location.href = '/login.html';
     }
 
     document.addEventListener('DOMContentLoaded', loadBookings);

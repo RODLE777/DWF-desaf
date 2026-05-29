@@ -1,72 +1,52 @@
-/**
- * Configuración centralizada de la aplicación
- * - URL base de la API
- * - Endpoints disponibles
- * - Constantes de la aplicación
- */
-
-const CONFIG = {
-  // URL Base - Cambiar según tu entorno
-  API_BASE_URL: 'http://localhost:8080/api',
+// Configuration for Event Booking Frontend
+const API_CONFIG = {
+  // Change this to your backend URL
+  BASE_URL: 'http://localhost:8080',
   
-  // Endpoints de Autenticación
-  AUTH: {
-    REGISTER: '/auth/register',
-    LOGIN: '/auth/login',
-    REFRESH_TOKEN: '/auth/refresh-token'
+  // API endpoints
+  ENDPOINTS: {
+    // Auth
+    REGISTER: '/api/auth/register',
+    LOGIN: '/api/auth/login',
+    REFRESH_TOKEN: '/api/auth/refresh-token',
+    
+    // Events (protected by JWT)
+    EVENTS: '/api/events',
+    EVENT_DETAIL: (id) => `/api/events/${id}`,
+    
+    // Bookings (protected by JWT)
+    BOOKINGS: '/api/bookings',
+    MY_BOOKINGS: '/api/bookings/my',
+    CANCEL_BOOKING: (id) => `/api/bookings/${id}`,
+    
+    // Users
+    USERS: '/api/users'
   },
   
-  // Endpoints de Eventos
-  EVENTS: {
-    LIST: '/events',
-    GET_BY_ID: (id) => `/events/${id}`
-  },
-  
-  // Endpoints de Reservas
-  BOOKINGS: {
-    CREATE: '/bookings',
-    MY_BOOKINGS: '/bookings/my',
-    CANCEL: (id) => `/bookings/${id}`
-  },
-  
-  // Tiempos (en ms)
-  TOKEN_EXPIRATION: 24 * 60 * 60 * 1000, // 24 horas
-  REFRESH_TOKEN_EXPIRATION: 7 * 24 * 60 * 60 * 1000, // 7 días
-  
-  // Claves de localStorage
+  // Local storage keys
   STORAGE_KEYS: {
-    ACCESS_TOKEN: 'access_token',
-    REFRESH_TOKEN: 'refresh_token',
-    USER: 'user',
-    ROLE: 'user_role'
+    TOKEN: 'event_booking_token',
+    REFRESH_TOKEN: 'event_booking_refresh_token',
+    USER: 'event_booking_user'
   },
   
-  // Roles disponibles
-  ROLES: {
-    ADMIN: 'ROLE_ADMIN',
-    USER: 'ROLE_USER'
-  },
+  // API timeout in ms
+  TIMEOUT: 10000,
   
-  // Estados de reserva
+  // Booking statuses
   BOOKING_STATUS: {
     CONFIRMED: 'CONFIRMED',
     CANCELLED: 'CANCELLED'
   },
   
-  // Rutas de la aplicación
+  // Routes
   ROUTES: {
     LOGIN: '/login.html',
     REGISTER: '/register.html',
-    DASHBOARD: '/dashboard.html',
     EVENTS: '/events.html',
     EVENT_DETAIL: '/event-detail.html',
     BOOKINGS: '/bookings.html',
     ADMIN: '/admin.html',
-    INDEX: '/index.html'
+    INDEX: '/'
   }
 };
-
-// Validación de configuración
-if (!CONFIG.API_BASE_URL) {
-  console.warn('[CONFIG] API_BASE_URL no está configurada');
-}

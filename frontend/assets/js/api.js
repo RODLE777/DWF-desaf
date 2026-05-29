@@ -1,212 +1,151 @@
-/**
- * API Service - Capa centralizada para consumir la API REST
- * Maneja:
- * - Requests HTTP (GET, POST, PUT, DELETE)
- * - JWT automático en headers
- * - Refresh token
- * - Manejo de errores global
- * - Expiración de token
- */
-
-class APIService {
-  constructor() {
-    this.baseURL = CONFIG.API_BASE_URL;
-    this.isRefreshing = false;
-    this.failedQueue = [];
-  }
-
-  /**
-   * Obtiene el token de acceso desde localStorage
-   */
-  getAccessToken() {
-    return localStorage.getItem(CONFIG.STORAGE_KEYS.ACCESS_TOKEN);
-  }
-
-  /**
-   * Obtiene el refresh token desde localStorage
-   */
-  getRefreshToken() {
-    return localStorage.getItem(CONFIG.STORAGE_KEYS.REFRESH_TOKEN);
-  }
-
-  /**
-   * Construye los headers necesarios para la petición
-   * Incluye JWT automáticamente si existe token
-   */
-  getHeaders(includeAuth = true) {
-    const headers = {
-      'Content-Type': 'application/json',
-      'Accept': 'application/json'
-    };
-
-    if (includeAuth) {
-      const token = this.getAccessToken();
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-      }
-    }
-
-    return headers;
-  }
-
-  /**
-   * Procesa una petición HTTP
-   * Maneja errores 401, refresh token, y errores globales
-   */
-  async request(endpoint, options = {}) {
-    const url = `${this.baseURL}${endpoint}`;
-    const config = {
-      method: options.method || 'GET',
-      headers: this.getHeaders(options.includeAuth !== false),
-      ...options
-    };
-
-    if (config.body && typeof config.body === 'object') {
-      config.body = JSON.stringify(config.body);
-    }
-
+// API Service - Handles all HTTP requests with JWT authentication
+const APIService = {
+  // Fetch with timeout
+  async fetchWithTimeout(url, options = {}) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), API_CONFIG.TIMEOUT);
+    
     try {
-      const response = await fetch(url, config);
-
-      // Token expirado - Intenta refresh
-      if (response.status === 401 && options.includeAuth !== false) {
-        return await this.handleTokenExpiration(endpoint, options);
-      }
-
-      // Otros errores
-      if (!response.ok) {
-        await this.handleError(response);
-      }
-
-      // Success (204 No Content)
-      if (response.status === 204) {
-        return { success: true };
-      }
-
-      return await response.json();
-    } catch (error) {
-      console.error('[API] Error en petición:', error);
-      throw {
-        status: 0,
-        message: 'Error de conexión con el servidor',
-        error: error.message
-      };
-    }
-  }
-
-  /**
-   * Intenta renovar el token cuando expira
-   */
-  async handleTokenExpiration(endpoint, options) {
-    if (this.isRefreshing) {
-      return new Promise((resolve) => {
-        this.failedQueue.push(() => {
-          resolve(this.request(endpoint, options));
-        });
+      const response = await fetch(url, {
+        ...options,
+        signal: controller.signal
       });
-    }
-
-    this.isRefreshing = true;
-
-    try {
-      const refreshToken = this.getRefreshToken();
-      if (!refreshToken) {
-        throw new Error('No hay refresh token disponible');
-      }
-
-      const response = await fetch(`${this.baseURL}${CONFIG.AUTH.REFRESH_TOKEN}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${refreshToken}`
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error('Refresh token inválido o expirado');
-      }
-
-      const data = await response.json();
-      
-      // Guarda los nuevos tokens
-      localStorage.setItem(CONFIG.STORAGE_KEYS.ACCESS_TOKEN, data.access_token);
-      localStorage.setItem(CONFIG.STORAGE_KEYS.REFRESH_TOKEN, data.refresh_token);
-
-      this.isRefreshing = false;
-
-      // Procesa la cola de peticiones fallidas
-      this.failedQueue.forEach(callback => callback());
-      this.failedQueue = [];
-
-      // Reintenta la petición original
-      return await this.request(endpoint, { ...options, retry: true });
+      clearTimeout(timeoutId);
+      return response;
     } catch (error) {
-      console.error('[API] Error al refrescar token:', error);
-      this.isRefreshing = false;
-      this.failedQueue = [];
-      
-      // Token inválido - logout automático
-      AuthService.logout();
-      throw {
-        status: 401,
-        message: 'Sesión expirada. Por favor, inicia sesión nuevamente.',
-        error: error.message
-      };
+      clearTimeout(timeoutId);
+      throw error;
     }
-  }
-
-  /**
-   * Maneja errores de respuesta
-   */
-  async handleError(response) {
-    const contentType = response.headers.get('content-type');
-    let errorData = {
-      status: response.status,
-      message: `Error ${response.status}`,
-      error: null
+  },
+  
+  // Get Authorization header
+  getAuthHeader() {
+    const token = StorageManager.getToken();
+    return token ? { 'Authorization': `Bearer ${token}` } : {};
+  },
+  
+  // Make request with error handling
+  async request(method, endpoint, body = null) {
+    const url = API_CONFIG.BASE_URL + endpoint;
+    const options = {
+      method,
+      headers: {
+        'Content-Type': 'application/json',
+        ...this.getAuthHeader()
+      }
     };
-
-    if (contentType && contentType.includes('application/json')) {
-      try {
-        const json = await response.json();
-        errorData.message = json.message || json.error || errorData.message;
-        errorData.error = json;
-      } catch (e) {
-        // No se puede parsear como JSON
+    
+    if (body) {
+      options.body = JSON.stringify(body);
+    }
+    
+    try {
+      const response = await this.fetchWithTimeout(url, options);
+      
+      // Handle 401 - token expired or invalid
+      if (response.status === 401) {
+        StorageManager.clearAuth();
+        UIManager.showToast('Sesión expirada. Por favor, inicia sesión nuevamente.', 'error');
+        window.location.href = API_CONFIG.ROUTES.LOGIN;
+        return null;
+      }
+      
+      // Handle 403 - access denied
+      if (response.status === 403) {
+        UIManager.showToast('Acceso denegado. No tienes permisos para esta acción.', 'error');
+        throw new Error('Access Denied');
+      }
+      
+      // Parse response
+      const data = await response.json().catch(() => null);
+      
+      // Handle 400 - validation errors
+      if (response.status === 400) {
+        const errorMsg = data?.message || 'Error de validación';
+        throw new Error(errorMsg);
+      }
+      
+      // Handle other errors
+      if (!response.ok) {
+        const errorMsg = data?.message || `Error: ${response.statusText}`;
+        throw new Error(errorMsg);
+      }
+      
+      return data;
+    } catch (error) {
+      console.error(`[API] Request failed: ${method} ${endpoint}`, error);
+      if (error.name !== 'AbortError') {
+        UIManager.showToast(error.message || 'Error en la solicitud', 'error');
+      }
+      throw error;
+    }
+  },
+  
+  // AUTH ENDPOINTS
+  async register(username, firstname, lastname, age, password) {
+    return this.request('POST', API_CONFIG.ENDPOINTS.REGISTER, {
+      username,
+      firstname,
+      lastname,
+      age: parseInt(age),
+      password
+    });
+  },
+  
+  async login(username, password) {
+    const response = await this.request('POST', API_CONFIG.ENDPOINTS.LOGIN, {
+      username,
+      password
+    });
+    
+    if (response && response.token) {
+      StorageManager.setToken(response.token);
+      if (response.refreshToken) {
+        StorageManager.setRefreshToken(response.refreshToken);
       }
     }
-
-    throw errorData;
+    
+    return response;
+  },
+  
+  // EVENT ENDPOINTS
+  async getEvents() {
+    return this.request('GET', API_CONFIG.ENDPOINTS.EVENTS);
+  },
+  
+  async getEventDetail(id) {
+    return this.request('GET', API_CONFIG.ENDPOINTS.EVENT_DETAIL(id));
+  },
+  
+  async createEvent(eventData) {
+    return this.request('POST', API_CONFIG.ENDPOINTS.EVENTS, eventData);
+  },
+  
+  async updateEvent(id, eventData) {
+    return this.request('PUT', API_CONFIG.ENDPOINTS.EVENT_DETAIL(id), eventData);
+  },
+  
+  async deleteEvent(id) {
+    return this.request('DELETE', API_CONFIG.ENDPOINTS.EVENT_DETAIL(id));
+  },
+  
+  // BOOKING ENDPOINTS
+  async createBooking(eventId, quantity) {
+    return this.request('POST', API_CONFIG.ENDPOINTS.BOOKINGS, {
+      eventId: parseInt(eventId),
+      quantity: parseInt(quantity)
+    });
+  },
+  
+  async getBookings() {
+    return this.request('GET', API_CONFIG.ENDPOINTS.MY_BOOKINGS);
+  },
+  
+  async getMyBookings() {
+    return this.request('GET', API_CONFIG.ENDPOINTS.MY_BOOKINGS);
+  },
+  
+  async cancelBooking(id) {
+    return this.request('DELETE', API_CONFIG.ENDPOINTS.CANCEL_BOOKING(id));
   }
-
-  /**
-   * GET - Obtener datos
-   */
-  async get(endpoint, options = {}) {
-    return this.request(endpoint, { ...options, method: 'GET' });
-  }
-
-  /**
-   * POST - Crear datos
-   */
-  async post(endpoint, body, options = {}) {
-    return this.request(endpoint, { ...options, method: 'POST', body });
-  }
-
-  /**
-   * PUT - Actualizar datos
-   */
-  async put(endpoint, body, options = {}) {
-    return this.request(endpoint, { ...options, method: 'PUT', body });
-  }
-
-  /**
-   * DELETE - Eliminar datos
-   */
-  async delete(endpoint, options = {}) {
-    return this.request(endpoint, { ...options, method: 'DELETE' });
-  }
-}
-
-// Instancia global del servicio de API
-const api = new APIService();
+};
